@@ -1,13 +1,11 @@
 ﻿using MelonLoader;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading.Tasks;
 using UnhollowerBaseLib;
 using UnhollowerRuntimeLib.XrefScans;
+using VRC.SDKBase;
 
 namespace QuickMenuPersistence
 {
@@ -19,7 +17,6 @@ namespace QuickMenuPersistence
             MelonUtils.NativeHookAttach((IntPtr)(&method), patch!.MethodHandle.GetFunctionPointer());
             return Marshal.GetDelegateForFunctionPointer<T>(method);
         }
-
         public static bool ContainsMethod(this MethodBase method, string target)
         {
             var xref = XrefScanner.XrefScan(method).ToArray();

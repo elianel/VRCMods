@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using MelonLoader;
 using UnhollowerRuntimeLib.XrefScans;
 using VRC;
@@ -9,7 +10,7 @@ using VRC.DataModel;
 using VRC.SDKBase;
 
 [assembly: MelonGame("VRChat")]
-[assembly: MelonInfo(typeof(PlayerList.PlayerList), nameof(PlayerList.PlayerList), "0.1.0", "elian", "github.com/elianel/VRCMods")]
+[assembly: MelonInfo(typeof(PlayerList.PlayerList), nameof(PlayerList.PlayerList), "0.1.1", "elian", "github.com/elianel/VRCMods")]
 [assembly: MelonColor(ConsoleColor.DarkYellow)]
 [assembly: MelonOptionalDependencies("UIExpansionKit")]
 
@@ -17,15 +18,21 @@ namespace PlayerList
 {
     public class PlayerList : MelonMod
     {
+        internal static BindingFlags PrivateNonPublic = BindingFlags.Static | BindingFlags.NonPublic;
+
         internal static MelonLogger.Instance Logger;
         internal static MelonPreferences_Category Category;
-        internal static MelonPreferences_Entry<bool> DisplayRankColor;
+        internal static MelonPreferences_Entry<bool> State, DisplayRankColor;
+
 
         public override void OnApplicationStart()
         {
             Logger = LoggerInstance;
             Category = MelonPreferences.CreateCategory("Player List");
-            DisplayRankColor = Category.CreateEntry("player_list", true, "Display Rank Colors", "Whether or not the playerlist displays rank colors.");
+            DisplayRankColor = Category.CreateEntry("player_list_rank_colors", true, "Display Rank Colors", "Whether or not the playerlist displays rank colors.");
+            State = Category.CreateEntry("player_list_state", true, "Show/Hide Player List", "Toggles the player list.");
+            State.OnValueChanged += (oldState, newState) => UI.TogglePlayerList(newState);
+
             UI.Setup().Start();
 
             var m0 = typeof(NetworkManager).GetMethod("Method_Public_Void_Player_0");
@@ -39,19 +46,21 @@ namespace PlayerList
             }
             _onPlayerJoined = Helper.Patch<OnPlayerJoined>(
                 found ? m0 : m1,
-                typeof(PlayerList).GetMethod(nameof(PlayerList.OnPlayerJoinedDetour), BindingFlags.Static | BindingFlags.NonPublic)
+                typeof(PlayerList).GetMethod(nameof(PlayerList.OnPlayerJoinedDetour), PrivateNonPublic)
             );
             _onPlayerLeft = Helper.Patch<OnPlayerLeft>(
                 found ? m1 : m0,
-                typeof(PlayerList).GetMethod(nameof(PlayerList.OnPlayerLeftDetour), BindingFlags.Static | BindingFlags.NonPublic)
+                typeof(PlayerList).GetMethod(nameof(PlayerList.OnPlayerLeftDetour), PrivateNonPublic)
             );
 
             //sadly I couldn't find a better xref :( sooo loukylor's credit for the following..
-            UI._QMSelectMethod = typeof(UserSelectionManager)
-                .GetMethods()
-                .First(method => method.Name.StartsWith("Method_Public_Void_APIUser_")
-                && !method.Name.Contains("_PDM_")
-                && method.IsUsedBy("Method_Public_Virtual_Final_New_Void_IUser_"));
+            UI.SelectUserMethod = typeof(UserSelectionManager)
+                                    .GetMethods()
+                                    .First(method => 
+                                        method.Name.StartsWith("Method_Public_Void_APIUser_")
+                                        && !method.Name.Contains("_PDM_")
+                                        && method.IsUsedBy("Method_Public_Virtual_Final_New_Void_IUser_")
+                                    );
         }
         private static IntPtr OnPlayerJoinedDetour(IntPtr instPtr, IntPtr playerPtr, IntPtr nativeMethodInfoPtr)
         {
