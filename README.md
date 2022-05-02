@@ -1,7 +1,7 @@
 # VRCMods
 ## QuickMenu Persistence
 - My implementation but not my idea.
-- This mod is ***VR*** only.
+- This mod is more useful in ***VR***.
 - Required Dependencies: [UI Expansion Kit](https://github.com/knah/VRCMods#ui-expansion-kit).
 - ***But what does it do though?*** It stops your quickmenu from closing (so you can move with it open in your hand).
 
